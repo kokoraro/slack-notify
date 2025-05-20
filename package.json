@@ -1,0 +1,21 @@
+{
+  "name": "uptime-robot-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": ". venv/bin/activate && python3 app/app.py",
+    "build": "npx tailwindcss -i ./app/static/style.css -o ./app/static/tailwind.css",
+	"build-watch": "npx tailwindcss -i ./app/static/style.css -o ./app/static/tailwind.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.1"
+  }
+}
