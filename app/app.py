@@ -134,13 +134,13 @@ def get_status(website, uptime_api_key):
 # Check the status of a site. This is mainly for testing
 def site_status(command_text):
     if not command_text:
-        response = "Please provide a website. It should not include the scheme (http/https).\n Example: `/status subdomain.example.com`"
+        response = "Please provide a website. It should not include the scheme (http/https).\nExample: `/status subdomain.example.com`"
         return response
 
     try:
         website, uptime_api_key = split_text_on_pipe(command_text)
     except ValueError:
-        response = "Improperly formatted command. There should be exactly one pipe (|) separating the website and API key. Example: `\site-status subdomain.example.com | <your api key here>`"
+        response = "Improperly formatted command. There should be exactly one pipe (|) separating the website and API key. Example: `/site-status subdomain.example.com | <your api key here>`"
         return response
 
     if not re.match(r"^(?!https?://)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", website.strip()):
@@ -154,13 +154,13 @@ def site_status(command_text):
 # Add a site to the list of sites to monitor
 def monitor_site(command_text):
     if not command_text:
-        response = "Please provide a website. It should not include the scheme (http/https).\n Example: `/status subdomain.example.com`"
+        response = "Please provide a website. It should not include the scheme (http/https).\nExample: `/status subdomain.example.com`"
         return response
 
     try:
         website, uptime_api_key = split_text_on_pipe(command_text)
     except ValueError:
-        response = "Improperly formatted command. There should be exactly one pipe (|) separating the website and API key. Example: `\site-status subdomain.example.com | <your api key here>`"
+        response = "Improperly formatted command. There should be exactly one pipe (|) separating the website and API key. Example: `/site-status subdomain.example.com | <your api key here>`"
         return response
 
     if not re.match(r"^(?!https?://)[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", website.strip()):
