@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": ". venv/bin/activate && python3 app/app.py",
+    "start": "/home/$USER/uptime-robot-bot/start.sh",
+	"dev": ". venv/bin/activate && python3 app/app.py",
     "build": "npx tailwindcss -i ./app/static/style.css -o ./app/static/tailwind.css",
 	"build-watch": "npx tailwindcss -i ./app/static/style.css -o ./app/static/tailwind.css --watch"
   },
