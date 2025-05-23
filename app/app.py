@@ -19,19 +19,16 @@ app = Flask(__name__)
 
 # Load environment variables
 port = os.getenv("PORT", 5000)
-debug_mode = os.getenv("DEBUG_MODE", True)
+debug_mode = os.getenv("DEBUG_MODE", False)
 
 db_path = os.getenv("DB_PATH")
 
-#uptime_api_key = os.getenv("UPTIME_API_KEY")
 uptime_api_url = os.getenv("UPTIME_API_URL", "https://api.uptimerobot.com/v2/getMonitors")
 
 slack_bot_token = os.getenv("SLACK_BOT_TOKEN")
 slack_signing_secret = os.getenv("SLACK_SIGNING_SECRET")
 
 # Check if required environment variables are set
-#if not uptime_api_key:
-#    raise ValueError("API_KEY environment variable is not set.")
 if not slack_bot_token:
     raise ValueError("SLACK_BOT_TOKEN environment variable is not set.")
 if not slack_signing_secret:
