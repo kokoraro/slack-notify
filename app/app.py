@@ -92,9 +92,9 @@ def handle_app_home_opened(event_data):
             friendly_status = {
                 0: "Paused",
                 1: "Not checked yet",
-                2: "Up",
+                2: ":uptimerobot-up: Up",
                 8: "Seems down",
-                9: "Down",
+                9: ":uptimerobot-down: Down",
             }.get(last_status, "Unknown")
             site_blocks.append({
                 "type": "section",
@@ -107,6 +107,7 @@ def handle_app_home_opened(event_data):
                 },
                 "accessory": {
                     "type": "button",
+                    "style": "danger",
                     "text": {
                         "type": "plain_text",
                         "emoji": True,
@@ -162,7 +163,6 @@ def handle_app_home_opened(event_data):
 
 
 # Remove button
-
 @app.route("/slack/interactions", methods=["POST"])
 def slack_interactions():
     if not verifier.is_valid_request(request.get_data(), request.headers):
