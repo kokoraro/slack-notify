@@ -2,11 +2,6 @@
 
 This is a Slack bot to monitor your site using the Uptime Robot API.
 
-## Commands
-**/site-status [site | api-key]** (eg. `/site-status subdomain.example.com | yourapikey-goeshere`)
-
-This command gets the current status of the site. It was mostly for testing purposes.
-<br><br>
 
 **/check-sites-in-db**
 
