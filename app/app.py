@@ -14,12 +14,15 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
+
+
 load_dotenv()
 app = Flask(__name__)
 
 # Load environment variables
 port = os.getenv("PORT", 5000)
-debug_mode = os.getenv("DEBUG_MODE", False)
+debug_mode = os.getenv("DEBUG_MODE", False) in ("True", "1", "yes")
+
 
 db_path = os.getenv("DB_PATH")
 
@@ -43,9 +46,172 @@ slack_event_adapter = SlackEventAdapter(
     slack_signing_secret, "/slack/events", app
 )
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# App home page
+@slack_event_adapter.on("app_home_opened")
+def handle_app_home_opened(event_data):
+    user_id = event_data["event"]["user"]
+    
+    # Fetch the user's websites from the database
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, channel_id, website, last_status FROM monitor_sites WHERE user_id = ?", (user_id,))
+        rows = cursor.fetchall()
+        conn.close()
+    except sqlite3.Error as e:
+        if debug_mode:
+            print(f"Error fetching sites from the database: {e}")
+        return jsonify({"error": "Error fetching sites from the database."}), 500
+    site_blocks = []
+
+    # Append real sites
+    if rows:
+        site_blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "plain_text",
+                    "emoji": True,
+                    "text": "Here are your sites that are currently being monitored:"
+                }
+            },
+            {"type": "divider"}
+        ]
+        for row in rows:
+            user_id, channel_id, website, last_status = row
+            try:
+                last_status = int(last_status)
+            except (ValueError, TypeError):
+                last_status = 10
+            friendly_status = {
+                0: "Paused",
+                1: "Not checked yet",
+                2: "Up",
+                8: "Seems down",
+                9: "Down",
+            }.get(last_status, "Unknown")
+            site_blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"""
+                        *<https://{website}|{website}>*\n
+• Status: *{friendly_status}* (Code: {last_status})
+• Notification Channel: <#{channel_id}>"""
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "emoji": True,
+                        "text": "Remove"
+                    },
+                    "value": f"remove|{website}|{channel_id}"
+                }
+            })
+            site_blocks.append({"type": "divider"})
+
+        # Add help section
+        site_blocks.extend([
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "You can add or remove a monitor using the following commands:"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "`/monitor-site [url] | [api key]`  Add a new site\n `/remove-monitor-site [url] | [api key]`  Remove a site"
+                }
+            }
+        ])
+    else:
+        site_blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "No monitors were found for your current user."
+            }
+        })
+        site_blocks.append({"type": "divider"})
+        site_blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "You can add a monitor using the `/monitor-site [url] | [api key]` command."
+            }
+        })
+
+
+    client.views_publish(
+        user_id=user_id,
+        view={
+            "type": "home",
+            "blocks": site_blocks
+        }
+    )
+
+
+# Remove button
+
+@app.route("/slack/interactions", methods=["POST"])
+def slack_interactions():
+    if not verifier.is_valid_request(request.get_data(), request.headers):
+        return "Invalid request", 400
+
+    payload = json.loads(request.form["payload"])
+    if not payload:
+        return "No payload found", 400
+    
+    if payload["type"] == "block_actions":
+        actions = payload.get("actions", [])
+        if not actions:
+            return "No actions found", 400
+        
+        action = actions[0]
+        if action["type"] == "button" and action["value"].startswith("remove|"):
+            website = action["value"][7:].split("|")[0]
+            channel_id = action["value"][7:].split("|")[1]
+            user_id = payload["user"]["id"]
+
+            try:
+                db = sqlite3.connect(db_path)
+                cursor = db.cursor()
+                cursor.execute("DELETE FROM monitor_sites WHERE user_id=? AND channel_id=? AND website=?", (user_id, channel_id, website))
+                db.commit()
+                db.close()
+            except sqlite3.Error as e:
+                if debug_mode:
+                    print(f"Error removing site from the database: {e}")
+                    client.views_publish(
+                        user_id=user_id,
+                        view={
+                            "type": "modal",
+                            "blocks": [
+                                {
+                                    "type": "section",
+                                    "text": {
+                                        "type": "mrkdwn",
+                                        "text": f"Error removing site from the database: {e}\nYou can refresh this page by going to another tab and coming back to the App Home."
+                                    }
+                                }
+                            ]
+                        }
+                    )
+                return "Error removing site from the database.", 500
+
+
+    return "", 200
+
 
 
 @app.route("/slack/command", methods=["POST"])
@@ -472,6 +638,7 @@ def scheduled_check():
         return "Error fetching sites from the database."
     
     if not sites:
+        print("No sites found in the database.")
         return "No sites found in the database."
 
     for site in sites:
@@ -479,8 +646,14 @@ def scheduled_check():
         channel_id = site[1]
         website = site[2]
         api_key = site[3]
-        last_status = int(site[4])
+        try:
+            last_status = int(site[4])
+        except (ValueError, TypeError):
+            last_status = 8  # If last_status is not an int, we assume the site seems down (status code 8)
+            print(f"Invalid last_status for site {website}. Setting to 8 (seems down).")
         status = get_status(website, api_key, mode="plain")
+        if type(status) is not int:
+            status = 8  # If the status is not an int, we assume the site is down (status code 8)
         
         if status == last_status:
             continue
@@ -508,8 +681,16 @@ def scheduled_check():
             message = f"Hey <@{user_id}>! Your site ({website}) seems to be down."
         elif status == 9:  # Down
             message = f"Hey <@{user_id}>! Your site ({website}) is down."
-        if not message:
-            continue
+        else:
+            message = f"Hey <@{user_id}>! Your site ({website}) has an unknown status: {status}. Something seems to have gone wrong."
+            client.chat_postMessage(
+                channel="C094WP8REDT",
+                text=f"Unknown status for site {website} in channel <#{channel_id}>. Status code: {status}",
+                unfurl_links=False,
+                unfurl_media=False
+            )
+
+        print(message)
         
         client.chat_postMessage(
             channel=channel_id,
@@ -522,11 +703,18 @@ def scheduled_check():
     return
 
 def run_schedule():
+    client.chat_postMessage(
+        channel="C094WP8REDT",
+        text="Uptime robot bot schedule runner started.",
+        unfurl_links=False,
+        unfurl_media=False
+    )
     while True:
         schedule.run_pending()
-        time.sleep(1)
+        time.sleep(0.5)
 
-# Schedule the check every 1 minutes
+
+# Schedule the check every 1 minute
 schedule.every().minute.at(":00").do(scheduled_check)
 
 
