@@ -17,7 +17,7 @@ Add the site to the database of sites to be monitored.
 
 Remove the site from the database of sites to stop monitoring.
 <br><br>
-For all commands you can use any type of api key you like but a read only api key will prevent the bot from making any changes to your monitors.
+For all commands you can use any type of api key you like but if you use a read only api key anyone who finds it wouldn't be able to make any changes to your monitors.
 
 ## Installation
 To set up the bot, clone the repository. Then install npm packages by running `npm install`. Next create a python venv named `venv` in the root directory of the folder using `python -m venv venv`. Activate the venv (`. ./venv/bin/activate`) and install the required libraries from the requirments.txt file in the root folder using `pip install -r ./requirments.txt`.
