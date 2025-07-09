@@ -15,7 +15,7 @@ Add the site to the database of sites to be monitored.
 
 **/remove-monitor-site [site | api-key]** (eg. `/remove-monitor-site subdomain.example.com | yourapikey-goeshere`)
 
-Remove the site from th edatabase of sites to stop monitoring.
+Remove the site from the database of sites to stop monitoring.
 <br><br>
 For all commands you can use any type of api key you like but a read only api key will prevent the bot from making any changes to your monitors.
 
